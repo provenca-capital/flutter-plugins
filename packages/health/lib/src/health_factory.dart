@@ -34,6 +34,12 @@ class HealthFactory {
           ? _dataTypeKeysAndroid.contains(dataType)
           : _dataTypeKeysIOS.contains(dataType);
 
+  /// Check if a given data type is available on the platform
+  bool isStatisticDataTypeAvailable(HealthDataType dataType) =>
+      _platformType == PlatformType.ANDROID
+          ? _dataTypeKeysAndroid.contains(dataType)
+          : _statisticDataTypeKeysIOS.contains(dataType);
+
   /// Determines if the data types have been granted with the specified access rights.
   ///
   /// Returns:
@@ -425,6 +431,29 @@ class HealthFactory {
     return removeDuplicates(dataPoints);
   }
 
+  /// Fetch a list of health data points based on [types].
+  Future<List<HealthDataPoint>> getStatisticDataFromTypes(
+      DateTime startTime, DateTime endTime, List<HealthDataType> types) async {
+    List<HealthDataPoint> dataPoints = [];
+
+    for (var type in types) {
+      if (_platformType == PlatformType.ANDROID) {
+        final result = await _prepareQuery(startTime, endTime, type);
+        dataPoints.addAll(result);
+      } else {
+        final result = await _prepareQueryStatistic(startTime, endTime, type);
+        dataPoints.addAll(result);
+      }
+    }
+
+    const int threshold = 100;
+    if (dataPoints.length > threshold) {
+      return compute(removeDuplicates, dataPoints);
+    }
+
+    return removeDuplicates(dataPoints);
+  }
+
   /// Prepares a query, i.e. checks if the types are available, etc.
   Future<List<HealthDataPoint>> _prepareQuery(
       DateTime startTime, DateTime endTime, HealthDataType dataType) async {
@@ -445,6 +474,21 @@ class HealthFactory {
       return _computeAndroidBMI(startTime, endTime);
     }
     return await _dataQuery(startTime, endTime, dataType);
+  }
+
+  /// Prepares a query, i.e. checks if the types are available, etc.
+  Future<List<HealthDataPoint>> _prepareQueryStatistic(
+      DateTime startTime, DateTime endTime, HealthDataType dataType) async {
+    // Ask for device ID only once
+    _deviceId ??= (await _deviceInfo.iosInfo).identifierForVendor;
+
+    // If not implemented on platform, throw an exception
+    if (!isStatisticDataTypeAvailable(dataType)) {
+      throw HealthException(
+          dataType, 'Not available on platform $_platformType');
+    }
+
+    return await _dataQueryStatistic(startTime, endTime, dataType);
   }
 
   /// Fetches data points from Android/iOS native code.
@@ -471,6 +515,35 @@ class HealthFactory {
         return compute(_parse, mesg);
       }
       return _parse(mesg);
+    } else {
+      return <HealthDataPoint>[];
+    }
+  }
+
+  Future<List<HealthDataPoint>> _dataQueryStatistic(
+      DateTime startTime, DateTime endTime, HealthDataType dataType) async {
+    final args = <String, dynamic>{
+      'dataTypeKey': dataType.name,
+      'dataUnitKey': _dataTypeToUnit[dataType]!.name,
+      'startTime': startTime.millisecondsSinceEpoch,
+      'endTime': endTime.millisecondsSinceEpoch
+    };
+    final fetchedDataPoints =
+        await _channel.invokeMethod('getNumberOfSteps', args);
+print(fetchedDataPoints);
+    if (fetchedDataPoints != null) {
+      final mesg = <String, dynamic>{
+        "dataType": dataType,
+        "dataPoints": fetchedDataPoints,
+        "deviceId": '$_deviceId',
+      };
+      const thresHold = 100;
+      // If the no. of data points are larger than the threshold,
+      // call the compute method to spawn an Isolate to do the parsing in a separate thread.
+      if (fetchedDataPoints.length > thresHold) {
+        return compute(_parseStatistic, mesg);
+      }
+      return _parseStatistic(mesg);
     } else {
       return <HealthDataPoint>[];
     }
@@ -508,6 +581,36 @@ class HealthFactory {
         device,
         sourceId,
         sourceName,
+      );
+    }).toList();
+
+    return list;
+  }
+
+  /// Parses the fetched data points into a list of [HealthDataPoint].
+  static List<HealthDataPoint> _parseStatistic(Map<String, dynamic> message) {
+    final dataType = message["dataType"];
+    final dataPoints = message["dataPoints"];
+    final device = message["deviceId"];
+    final unit = _dataTypeToUnit[dataType]!;
+    final list = dataPoints.map<HealthDataPoint>((e) {
+      // Handling different [HealthValue] types
+      HealthValue value = NumericHealthValue(e['value']);
+      ;
+
+      final DateTime from = DateTime.fromMillisecondsSinceEpoch(e['date_from']);
+      final DateTime to = DateTime.fromMillisecondsSinceEpoch(e['date_to']);
+
+      return HealthDataPoint(
+        value,
+        dataType,
+        unit,
+        from,
+        to,
+        _platformType,
+        device,
+        "",
+        "",
       );
     }).toList();
 

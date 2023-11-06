@@ -65,6 +65,11 @@ enum HealthDataAccess {
   READ_WRITE,
 }
 
+/// List of data types available on iOS for statistic query
+const List<HealthDataType> _statisticDataTypeKeysIOS = [
+  HealthDataType.STEPS,
+];
+
 /// List of data types available on iOS
 const List<HealthDataType> _dataTypeKeysIOS = [
   HealthDataType.ACTIVE_ENERGY_BURNED,

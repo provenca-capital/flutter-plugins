@@ -10,6 +10,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
   var headacheType = Set<HKSampleType>()
   var allDataTypes = Set<HKSampleType>()
   var dataTypesDict: [String: HKSampleType] = [:]
+  var dataTypesStatisticDict: [String: HKQuantityType] = [:]
   var unitDict: [String: HKUnit] = [:]
   var workoutActivityTypeMap: [String: HKWorkoutActivityType] = [:]
 
@@ -142,6 +143,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     /// Handle getData
     else if call.method.elementsEqual("getData") {
       getData(call: call, result: result)
+    }
+
+    /// Handle getData
+    else if call.method.elementsEqual("getNumberOfSteps") {
+      getNumberOfSteps(call: call, result: result)
     }
 
     /// Handle getTotalStepsInInterval
@@ -471,6 +477,66 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     HKHealthStore().execute(deleteQuery)
   }
 
+  func getNumberOfSteps(call: FlutterMethodCall, result: @escaping FlutterResult) {
+      let arguments = call.arguments as? NSDictionary
+      let dataTypeKey = (arguments?["dataTypeKey"] as? String)!
+      let dataUnitKey = (arguments?["dataUnitKey"] as? String)
+      let startTime = (arguments?["startTime"] as? NSNumber) ?? 0
+      let endTime = (arguments?["endTime"] as? NSNumber) ?? 0
+      let limit = (arguments?["limit"] as? Int) ?? HKObjectQueryNoLimit
+
+          // Convert dates from milliseconds to Date()
+      let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
+      let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+
+      let dataType = dataTypeStatisticLookUp(key: dataTypeKey)
+      var unit: HKUnit?
+      if let dataUnitKey = dataUnitKey {
+         unit = unitDict[dataUnitKey]
+      }
+
+      let predicate = HKQuery.predicateForSamples(withStart: dateFrom, end: dateTo, options: .strictStartDate)
+      let options: HKStatisticsOptions = .cumulativeSum
+      let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
+
+
+      let query = HKStatisticsCollectionQuery(quantityType: dataType, quantitySamplePredicate: predicate, options: options, anchorDate: dateFrom, intervalComponents: DateComponents(day: 1))
+       query.initialResultsHandler = { query, statisticsCollection, error in
+              if let error = error {
+                  print("Error fetching step counts: \(error)")
+                  DispatchQueue.main.async {
+                      result(nil)
+                  }
+                  return
+              }
+              if let statisticsCollection = statisticsCollection {
+              let statisticsArray = statisticsCollection.statistics()
+              let dictionaries = statisticsArray.map { statistics -> NSDictionary in
+                  if let sumQuantity = statistics.sumQuantity() {
+                      let value = sumQuantity.doubleValue(for: HKUnit.count())
+                      return [
+                          "uuid": "", // Replace with the actual UUID
+                          "value": value,
+                          "date_from": Int(statistics.startDate.timeIntervalSince1970 * 1000),
+                          "date_to": Int(statistics.endDate.timeIntervalSince1970 * 1000),
+                          "source_id": "", // Replace with the actual source ID
+                          "source_name": "" // Replace with the actual source name
+                      ]
+                  } else {
+                      return [:] // Return an empty dictionary if sumQuantity is nil
+                  }
+              }
+
+              DispatchQueue.main.async {
+                  result(dictionaries)
+              }
+              }else{
+              }
+       }
+
+      HKHealthStore().execute(query)
+  }
+
   func getData(call: FlutterMethodCall, result: @escaping FlutterResult) {
     let arguments = call.arguments as? NSDictionary
     let dataTypeKey = (arguments?["dataTypeKey"] as? String)!
@@ -722,6 +788,13 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     return dataType_
   }
 
+  func dataTypeStatisticLookUp(key: String) -> HKQuantityType {
+    guard let dataType_ = dataTypesStatisticDict[key] else {
+      return HKQuantityType.quantityType(forIdentifier: .stepCount)!
+    }
+    return dataType_
+  }
+
   func initializeTypes() {
     // Initialize units
     unitDict[GRAM] = HKUnit.gram()
@@ -914,6 +987,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
 
       dataTypesDict[EXERCISE_TIME] = HKSampleType.quantityType(forIdentifier: .appleExerciseTime)!
       dataTypesDict[WORKOUT] = HKSampleType.workoutType()
+
+      dataTypesStatisticDict[STEPS] = HKQuantityType.quantityType(forIdentifier: .stepCount)!
 
       healthDataTypes = Array(dataTypesDict.values)
     }
