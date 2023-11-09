@@ -146,8 +146,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     }
 
     /// Handle getData
-    else if call.method.elementsEqual("getNumberOfSteps") {
-      getNumberOfSteps(call: call, result: result)
+    else if call.method.elementsEqual("getStatisticData") {
+      getStatisticData(call: call, result: result)
     }
 
     /// Handle getTotalStepsInInterval
@@ -477,7 +477,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     HKHealthStore().execute(deleteQuery)
   }
 
-  func getNumberOfSteps(call: FlutterMethodCall, result: @escaping FlutterResult) {
+  func getStatisticData(call: FlutterMethodCall, result: @escaping FlutterResult) {
       let arguments = call.arguments as? NSDictionary
       let dataTypeKey = (arguments?["dataTypeKey"] as? String)!
       let dataUnitKey = (arguments?["dataUnitKey"] as? String)
@@ -513,7 +513,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
               let statisticsArray = statisticsCollection.statistics()
               let dictionaries = statisticsArray.map { statistics -> NSDictionary in
                   if let sumQuantity = statistics.sumQuantity() {
-                      let value = sumQuantity.doubleValue(for: HKUnit.count())
+                      let value = sumQuantity.doubleValue(for: unit!)
                       return [
                           "uuid": "", // Replace with the actual UUID
                           "value": value,
@@ -989,6 +989,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
       dataTypesDict[WORKOUT] = HKSampleType.workoutType()
 
       dataTypesStatisticDict[STEPS] = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+      dataTypesStatisticDict[FLIGHTS_CLIMBED] = HKQuantityType.quantityType(forIdentifier: .flightsClimbed)!
+      dataTypesStatisticDict[DISTANCE_WALKING_RUNNING] = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
+      dataTypesStatisticDict[ACTIVE_ENERGY_BURNED] = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
+      dataTypesStatisticDict[BASAL_ENERGY_BURNED] = HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned)!
 
       healthDataTypes = Array(dataTypesDict.values)
     }

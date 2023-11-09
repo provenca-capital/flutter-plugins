@@ -522,6 +522,7 @@ class HealthFactory {
 
   Future<List<HealthDataPoint>> _dataQueryStatistic(
       DateTime startTime, DateTime endTime, HealthDataType dataType) async {
+
     final args = <String, dynamic>{
       'dataTypeKey': dataType.name,
       'dataUnitKey': _dataTypeToUnit[dataType]!.name,
@@ -529,8 +530,8 @@ class HealthFactory {
       'endTime': endTime.millisecondsSinceEpoch
     };
     final fetchedDataPoints =
-        await _channel.invokeMethod('getNumberOfSteps', args);
-print(fetchedDataPoints);
+        await _channel.invokeMethod('getStatisticData', args);
+
     if (fetchedDataPoints != null) {
       final mesg = <String, dynamic>{
         "dataType": dataType,
