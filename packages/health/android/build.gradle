@@ -38,10 +38,10 @@ android {
     kotlin {
         jvmToolchain(17)
     }
-    
+
     defaultConfig {
-        minSdkVersion 28
-        targetSdkVersion 33
+        minSdkVersion 26
+        targetSdkVersion 34
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     lintOptions {
