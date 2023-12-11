@@ -1135,6 +1135,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataTypesStatisticDict[DISTANCE_WALKING_RUNNING] = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
             dataTypesStatisticDict[ACTIVE_ENERGY_BURNED] = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
             dataTypesStatisticDict[BASAL_ENERGY_BURNED] = HKQuantityType.quantityType(forIdentifier: .basalEnergyBurned)!
+            dataTypesStatisticDict[EXERCISE_TIME] = HKQuantityType.quantityType(forIdentifier: .appleExerciseTime)!
 
             healthDataTypes = Array(dataTypesDict.values)
         }

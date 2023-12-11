@@ -73,7 +73,7 @@ const List<HealthDataType> _statisticDataTypeKeysIOS = [
   HealthDataType.BASAL_ENERGY_BURNED,
   HealthDataType.DISTANCE_WALKING_RUNNING,
   HealthDataType.FLIGHTS_CLIMBED,
-  HealthDataType.VO2MAX,
+  HealthDataType.EXERCISE_TIME,
 ];
 
 /// List of data types available on iOS
