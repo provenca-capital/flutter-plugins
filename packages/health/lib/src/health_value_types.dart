@@ -137,19 +137,21 @@ class WorkoutHealthValue extends HealthValue {
   factory WorkoutHealthValue.fromJson(json) {
     return WorkoutHealthValue(
         HealthWorkoutActivityType.values.firstWhere(
-            (element) => element.name == json['workoutActivityType']),
+          (element) => element.name == json['workoutActivityType'],
+          orElse: () => HealthWorkoutActivityType.OTHER,
+        ),
         json['totalEnergyBurned'] != null
             ? (json['totalEnergyBurned'] as num).toInt()
             : null,
         json['totalEnergyBurnedUnit'] != null
-            ? HealthDataUnit.values.firstWhere(
+            ? HealthDataUnit.values.firstWhereOrNull(
                 (element) => element.name == json['totalEnergyBurnedUnit'])
             : null,
         json['totalDistance'] != null
             ? (json['totalDistance'] as num).toInt()
             : null,
         json['totalDistanceUnit'] != null
-            ? HealthDataUnit.values.firstWhere(
+            ? HealthDataUnit.values.firstWhereOrNull(
                 (element) => element.name == json['totalDistanceUnit'])
             : null);
   }
@@ -281,6 +283,89 @@ class ElectrocardiogramVoltageValue extends HealthValue {
 
   @override
   String toString() => voltage.toString();
+}
+
+/// A [HealthValue] object for nutrition
+/// Parameters:
+/// * [protein] - the amount of protein in grams
+/// * [calories] - the amount of calories in kcal
+/// * [fat] - the amount of fat in grams
+/// * [name] - the name of the food
+/// * [carbs] - the amount of carbs in grams
+/// * [mealType] - the type of meal
+class NutritionHealthValue extends HealthValue {
+  double? _protein;
+  double? _calories;
+  double? _fat;
+  String? _name;
+  double? _carbs;
+  String _mealType;
+
+  NutritionHealthValue(this._protein, this._calories, this._fat, this._name,
+      this._carbs, this._mealType);
+
+  /// The amount of protein in grams.
+  double? get protein => _protein;
+
+  /// The amount of calories in kcal.
+  double? get calories => _calories;
+
+  /// The amount of fat in grams.
+  double? get fat => _fat;
+
+  /// The name of the food.
+  String? get name => _name;
+
+  /// The amount of carbs in grams.
+  double? get carbs => _carbs;
+
+  /// The type of meal.
+  String get mealType => _mealType;
+
+  factory NutritionHealthValue.fromJson(json) {
+    return NutritionHealthValue(
+      json['protein'] != null ? (json['protein'] as num).toDouble() : null,
+      json['calories'] != null ? (json['calories'] as num).toDouble() : null,
+      json['fat'] != null ? (json['fat'] as num).toDouble() : null,
+      json['name'] != null ? (json['name'] as String) : null,
+      json['carbs'] != null ? (json['carbs'] as num).toDouble() : null,
+      json['mealType'] as String,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'protein': _protein,
+        'calories': _calories,
+        'fat': _fat,
+        'name': _name,
+        'carbs': _carbs,
+        'mealType': _mealType,
+      };
+
+  @override
+  String toString() {
+    return """protein: ${protein.toString()},
+    calories: ${calories.toString()},
+    fat: ${fat.toString()},
+    name: ${name.toString()},
+    carbs: ${carbs.toString()},
+    mealType: $mealType""";
+  }
+
+  @override
+  bool operator ==(Object o) {
+    return o is NutritionHealthValue &&
+        o.protein == this.protein &&
+        o.calories == this.calories &&
+        o.fat == this.fat &&
+        o.name == this.name &&
+        o.carbs == this.carbs &&
+        o.mealType == this.mealType;
+  }
+
+  @override
+  int get hashCode => Object.hash(protein, calories, fat, name, carbs);
 }
 
 /// An abstract class for health values.
