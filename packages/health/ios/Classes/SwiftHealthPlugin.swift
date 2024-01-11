@@ -54,6 +54,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     let SLEEP_DEEP = "SLEEP_DEEP"
     let SLEEP_REM = "SLEEP_REM"
     let VO2MAX = "VO2MAX"
+    let LEAN_BODY_MASS = "LEAN_BODY_MASS"
 
     let EXERCISE_TIME = "EXERCISE_TIME"
     let WORKOUT = "WORKOUT"
@@ -1124,6 +1125,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             dataTypesDict[SLEEP_DEEP] = HKSampleType.categoryType(forIdentifier: .sleepAnalysis)!
             dataTypesDict[SLEEP_REM] = HKSampleType.categoryType(forIdentifier: .sleepAnalysis)!
             dataTypesDict[VO2MAX] = HKSampleType.quantityType(forIdentifier: HKQuantityTypeIdentifier.vo2Max)!
+            dataTypesDict[LEAN_BODY_MASS] = HKSampleType.quantityType(forIdentifier: .leanBodyMass)!
 
             dataTypesDict[EXERCISE_TIME] = HKSampleType.quantityType(forIdentifier: .appleExerciseTime)!
             dataTypesDict[WORKOUT] = HKSampleType.workoutType()
