@@ -648,12 +648,20 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             unit = unitDict[dataUnitKey]
         }
 
-        let predicate = HKQuery.predicateForSamples(
+        let datePredicate = HKQuery.predicateForSamples(
             withStart: dateFrom, end: dateTo, options: .strictStartDate)
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
 
+        let sourcePredicate = HKQuery.predicateForObjects(withDeviceProperty: HKDevicePropertyKeyModel, allowedValues: ["Watch"])
+        let compoundPredicate: NSCompoundPredicate
+        if dataType == HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
+            compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, sourcePredicate])
+        } else {
+            compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate])
+        }
+
         let query = HKSampleQuery(
-            sampleType: dataType, predicate: predicate, limit: limit, sortDescriptors: [sortDescriptor]
+            sampleType: dataType, predicate: compoundPredicate, limit: limit, sortDescriptors: [sortDescriptor]
         ) {
             [self]
             x, samplesOrNil, error in
