@@ -209,6 +209,7 @@ class HealthFactory {
           _platformType,
           _deviceId!,
           '',
+          '',
           '');
 
       bmiHealthPoints.add(x);
@@ -616,6 +617,7 @@ class HealthFactory {
       final DateTime to = DateTime.fromMillisecondsSinceEpoch(e['date_to']);
       final String sourceId = e["source_id"];
       final String sourceName = e["source_name"];
+      final currentDate = e["current_date"] ?? '';
       return HealthDataPoint(
         value,
         dataType,
@@ -626,6 +628,7 @@ class HealthFactory {
         device,
         sourceId,
         sourceName,
+        currentDate,
       );
     }).toList();
 
@@ -654,6 +657,7 @@ class HealthFactory {
         to,
         _platformType,
         device,
+        "",
         "",
         "",
       );

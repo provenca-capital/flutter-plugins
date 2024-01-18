@@ -12,6 +12,7 @@ class HealthDataPoint {
   String _deviceId;
   String _sourceId;
   String _sourceName;
+  String _currentDate;
 
   HealthDataPoint(
       this._value,
@@ -22,7 +23,8 @@ class HealthDataPoint {
       this._platform,
       this._deviceId,
       this._sourceId,
-      this._sourceName) {
+      this._sourceName,
+      this._currentDate) {
     // set the value to minutes rather than the category
     // returned by the native API
     if (type == HealthDataType.MINDFULNESS ||
@@ -72,7 +74,8 @@ class HealthDataPoint {
             .indexOf(json['platform_type'])],
         json['device_id'],
         json['source_id'],
-        json['source_name']);
+        json['source_name'],
+        json['current_date']);
   }
 
   /// Converts the [HealthDataPoint] to a json object
@@ -85,7 +88,8 @@ class HealthDataPoint {
         'platform_type': PlatformTypeJsonValue[platform],
         'device_id': deviceId,
         'source_id': sourceId,
-        'source_name': sourceName
+        'source_name': sourceName,
+        'current_date': currentDate
       };
 
   @override
@@ -98,6 +102,7 @@ class HealthDataPoint {
     platform: $platform,
     deviceId: $deviceId,
     sourceId: $sourceId,
+    currentDate: $currentDate,
     sourceName: $sourceName""";
 
   /// The quantity value of the data point
@@ -132,6 +137,8 @@ class HealthDataPoint {
 
   /// The name of the source from which the data point was fetched.
   String get sourceName => _sourceName;
+
+  String get currentDate => _currentDate;
 
   @override
   bool operator ==(Object o) {

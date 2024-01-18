@@ -668,6 +668,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
 
             switch samplesOrNil {
             case let (samples as [HKQuantitySample]) as Any:
+                let currentDate = Date()
+                let dateFormatter = DateFormatter()
+                dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss";
+                let formattedDate = dateFormatter.string(from: currentDate)
+
                 let dictionaries = samples.map { sample -> NSDictionary in
                     return [
                         "uuid": "\(sample.uuid)",
@@ -676,6 +681,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
                         "source_id": sample.sourceRevision.source.bundleIdentifier,
                         "source_name": sample.sourceRevision.source.name,
+                        "current_date": formattedDate,
                     ]
                 }
                 DispatchQueue.main.async {
@@ -722,6 +728,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
                         "source_id": sample.sourceRevision.source.bundleIdentifier,
                         "source_name": sample.sourceRevision.source.name,
+                        "current_date": "",
                     ]
                 }
                 DispatchQueue.main.async {
