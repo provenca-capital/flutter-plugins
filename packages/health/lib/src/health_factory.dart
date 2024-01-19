@@ -209,8 +209,7 @@ class HealthFactory {
           _platformType,
           _deviceId!,
           '',
-          '',
-          '');
+          '',);
 
       bmiHealthPoints.add(x);
     }
@@ -628,7 +627,6 @@ class HealthFactory {
         device,
         sourceId,
         sourceName,
-        currentDate,
       );
     }).toList();
 
@@ -657,7 +655,6 @@ class HealthFactory {
         to,
         _platformType,
         device,
-        "",
         "",
         "",
       );
