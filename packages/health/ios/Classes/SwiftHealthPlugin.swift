@@ -643,25 +643,17 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
 
         let dataType = dataTypeLookUp(key: dataTypeKey)
-        var unit: HKUnit?
-        if let dataUnitKey = dataUnitKey {
-            unit = unitDict[dataUnitKey]
-        }
+            var unit: HKUnit?
+            if let dataUnitKey = dataUnitKey {
+                unit = unitDict[dataUnitKey]
+            }
 
-        let datePredicate = HKQuery.predicateForSamples(
+        let predicate = HKQuery.predicateForSamples(
             withStart: dateFrom, end: dateTo, options: .strictStartDate)
         let sortDescriptor = NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)
 
-        let sourcePredicate = HKQuery.predicateForObjects(withDeviceProperty: HKDevicePropertyKeyModel, allowedValues: ["Watch"])
-        let compoundPredicate: NSCompoundPredicate
-        if dataType == HKObjectType.categoryType(forIdentifier: .sleepAnalysis) {
-            compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate, sourcePredicate])
-        } else {
-            compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [datePredicate])
-        }
-
         let query = HKSampleQuery(
-            sampleType: dataType, predicate: compoundPredicate, limit: limit, sortDescriptors: [sortDescriptor]
+            sampleType: dataType, predicate: predicate, limit: limit, sortDescriptors: [sortDescriptor]
         ) {
             [self]
             x, samplesOrNil, error in
@@ -722,7 +714,6 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
                         "source_id": sample.sourceRevision.source.bundleIdentifier,
                         "source_name": sample.sourceRevision.source.name,
-                        "current_date": "",
                     ]
                 }
                 DispatchQueue.main.async {
