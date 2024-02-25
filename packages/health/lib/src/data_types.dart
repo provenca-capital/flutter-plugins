@@ -48,6 +48,9 @@ enum HealthDataType {
   HEADACHE_MODERATE,
   HEADACHE_SEVERE,
   HEADACHE_UNSPECIFIED,
+  NUTRITION,
+  VO2MAX,
+  LEAN_BODY_MASS,
 
   // Heart Rate events (specific to Apple Watch)
   HIGH_HEART_RATE_EVENT,
@@ -63,6 +66,16 @@ enum HealthDataAccess {
   WRITE,
   READ_WRITE,
 }
+
+/// List of data types available on iOS for statistic query
+const List<HealthDataType> _statisticDataTypeKeysIOS = [
+  HealthDataType.STEPS,
+  HealthDataType.ACTIVE_ENERGY_BURNED,
+  HealthDataType.BASAL_ENERGY_BURNED,
+  HealthDataType.DISTANCE_WALKING_RUNNING,
+  HealthDataType.FLIGHTS_CLIMBED,
+  HealthDataType.EXERCISE_TIME,
+];
 
 /// List of data types available on iOS
 const List<HealthDataType> _dataTypeKeysIOS = [
@@ -112,6 +125,9 @@ const List<HealthDataType> _dataTypeKeysIOS = [
   HealthDataType.HEADACHE_SEVERE,
   HealthDataType.HEADACHE_UNSPECIFIED,
   HealthDataType.ELECTROCARDIOGRAM,
+  HealthDataType.NUTRITION,
+  HealthDataType.VO2MAX,
+  HealthDataType.LEAN_BODY_MASS,
 ];
 
 /// List of data types available on Android
@@ -143,6 +159,9 @@ const List<HealthDataType> _dataTypeKeysAndroid = [
   HealthDataType.FLIGHTS_CLIMBED,
   HealthDataType.BASAL_ENERGY_BURNED,
   HealthDataType.RESPIRATORY_RATE,
+  HealthDataType.NUTRITION,
+  HealthDataType.VO2MAX,
+  HealthDataType.LEAN_BODY_MASS,
 ];
 
 /// Maps a [HealthDataType] to a [HealthDataUnit].
@@ -176,6 +195,8 @@ const Map<HealthDataType, HealthDataUnit> _dataTypeToUnit = {
   HealthDataType.FLIGHTS_CLIMBED: HealthDataUnit.COUNT,
   HealthDataType.MOVE_MINUTES: HealthDataUnit.MINUTE,
   HealthDataType.DISTANCE_DELTA: HealthDataUnit.METER,
+  HealthDataType.VO2MAX: HealthDataUnit.VO2MAX_UNIT,
+  HealthDataType.LEAN_BODY_MASS: HealthDataUnit.KILOGRAM,
 
   HealthDataType.WATER: HealthDataUnit.LITER,
   HealthDataType.SLEEP_IN_BED: HealthDataUnit.MINUTE,
@@ -203,6 +224,8 @@ const Map<HealthDataType, HealthDataUnit> _dataTypeToUnit = {
   HealthDataType.IRREGULAR_HEART_RATE_EVENT: HealthDataUnit.NO_UNIT,
   HealthDataType.HEART_RATE_VARIABILITY_SDNN: HealthDataUnit.MILLISECOND,
   HealthDataType.ELECTROCARDIOGRAM: HealthDataUnit.VOLT,
+
+  HealthDataType.NUTRITION: HealthDataUnit.NO_UNIT,
 };
 
 const PlatformTypeJsonValue = {
@@ -287,6 +310,7 @@ enum HealthDataUnit {
   BEATS_PER_MINUTE,
   RESPIRATIONS_PER_MINUTE,
   MILLIGRAM_PER_DECILITER,
+  VO2MAX_UNIT,
   UNKNOWN_UNIT,
   NO_UNIT,
 }
@@ -448,6 +472,14 @@ enum HealthWorkoutActivityType {
 
   //
   OTHER,
+}
+
+enum MealType {
+  BREAKFAST,
+  LUNCH,
+  DINNER,
+  SNACK,
+  UNKNOWN,
 }
 
 /// Classifications for ECG readings.

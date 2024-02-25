@@ -48,9 +48,14 @@ const List<HealthDataType> dataTypesIOS = [
   HealthDataType.HEADACHE_SEVERE,
   HealthDataType.HEADACHE_UNSPECIFIED,
   //HealthDataType.ELECTROCARDIOGRAM,
+  HealthDataType.NUTRITION,
 ];
 
-/// List of data types available on Android
+/// List of data types available on Android.
+///
+/// Note that these are only the ones supported on Android's Health Connect API.
+/// Android's Google Fit have more types that we support in the [HealthDataType]
+/// enumeration.
 const List<HealthDataType> dataTypesAndroid = [
   HealthDataType.ACTIVE_ENERGY_BURNED,
   HealthDataType.BASAL_ENERGY_BURNED,
@@ -78,4 +83,5 @@ const List<HealthDataType> dataTypesAndroid = [
   HealthDataType.WORKOUT,
   HealthDataType.RESTING_HEART_RATE,
   HealthDataType.FLIGHTS_CLIMBED,
+  HealthDataType.NUTRITION,
 ];

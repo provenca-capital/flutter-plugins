@@ -34,6 +34,12 @@ class HealthFactory {
           ? _dataTypeKeysAndroid.contains(dataType)
           : _dataTypeKeysIOS.contains(dataType);
 
+  /// Check if a given data type is available on the platform
+  bool isStatisticDataTypeAvailable(HealthDataType dataType) =>
+      _platformType == PlatformType.ANDROID
+          ? _dataTypeKeysAndroid.contains(dataType)
+          : _statisticDataTypeKeysIOS.contains(dataType);
+
   /// Determines if the data types have been granted with the specified access rights.
   ///
   /// Returns:
@@ -107,11 +113,14 @@ class HealthFactory {
   ///   + If specified, each [HealthDataAccess] in this list is requested for its corresponding indexed
   ///   entry in [types]. In addition, the length of this list must be equal to that of [types].
   ///
-  ///  Caveat:
+  ///  Caveats:
   ///
-  ///   As Apple HealthKit will not disclose if READ access has been granted for a data type due to privacy concern,
-  ///   this method will return **true if the window asking for permission was showed to the user without errors**
-  ///   if it is called on iOS with a READ or READ_WRITE access.
+  ///  * This method may block if permissions are already granted. Hence, check
+  ///    [hasPermissions] before calling this method.
+  ///  * As Apple HealthKit will not disclose if READ access has been granted for
+  ///    a data type due to privacy concern, this method will return **true if
+  ///    the window asking for permission was showed to the user without errors**
+  ///    if it is called on iOS with a READ or READ_WRITE access.
   Future<bool> requestAuthorization(
     List<HealthDataType> types, {
     List<HealthDataAccess>? permissions,
@@ -147,8 +156,11 @@ class HealthFactory {
     if (_platformType == PlatformType.ANDROID) _handleBMI(mTypes, mPermissions);
 
     List<String> keys = mTypes.map((e) => e.name).toList();
+    print(
+        '>> trying to get permissions for $keys with permissions $mPermissions');
     final bool? isAuthorized = await _channel.invokeMethod(
         'requestAuthorization', {'types': keys, "permissions": mPermissions});
+    print('>> isAuthorized: $isAuthorized');
     return isAuthorized ?? false;
   }
 
@@ -203,7 +215,7 @@ class HealthFactory {
           _platformType,
           _deviceId!,
           '',
-          '');
+          '',);
 
       bmiHealthPoints.add(x);
     }
@@ -255,6 +267,8 @@ class HealthFactory {
     if (type == HealthDataType.SLEEP_ASLEEP ||
         type == HealthDataType.SLEEP_AWAKE ||
         type == HealthDataType.SLEEP_IN_BED ||
+        type == HealthDataType.SLEEP_DEEP ||
+        type == HealthDataType.SLEEP_REM ||
         type == HealthDataType.HEADACHE_NOT_PRESENT ||
         type == HealthDataType.HEADACHE_MILD ||
         type == HealthDataType.HEADACHE_MODERATE ||
@@ -360,6 +374,46 @@ class HealthFactory {
     return success ?? false;
   }
 
+  /// Saves meal record into Apple Health or Google Fit.
+  ///
+  /// Returns true if successful, false otherwise.
+  ///
+  /// Parameters:
+  /// * [startTime] - the start time when the meal was consumed.
+  ///   + It must be equal to or earlier than [endTime].
+  /// * [endTime] - the end time when the meal was consumed.
+  ///   + It must be equal to or later than [startTime].
+  /// * [caloriesConsumed] - total calories consumed with this meal.
+  /// * [carbohydrates] - optional carbohydrates information.
+  /// * [protein] - optional protein information.
+  /// * [fatTotal] - optional total fat information.
+  /// * [name] - optional name information about this meal.
+  Future<bool> writeMeal(
+      DateTime startTime,
+      DateTime endTime,
+      double? caloriesConsumed,
+      double? carbohydrates,
+      double? protein,
+      double? fatTotal,
+      String? name,
+      MealType mealType) async {
+    if (startTime.isAfter(endTime))
+      throw ArgumentError("startTime must be equal or earlier than endTime");
+
+    Map<String, dynamic> args = {
+      'startTime': startTime.millisecondsSinceEpoch,
+      'endTime': endTime.millisecondsSinceEpoch,
+      'caloriesConsumed': caloriesConsumed,
+      'carbohydrates': carbohydrates,
+      'protein': protein,
+      'fatTotal': fatTotal,
+      'name': name,
+      'mealType': mealType.name,
+    };
+    bool? success = await _channel.invokeMethod('writeMeal', args);
+    return success ?? false;
+  }
+
   /// Saves audiogram into Apple Health.
   ///
   /// Returns true if successful, false otherwise.
@@ -425,6 +479,29 @@ class HealthFactory {
     return removeDuplicates(dataPoints);
   }
 
+  /// Fetch a list of health data points based on [types].
+  Future<List<HealthDataPoint>> getStatisticDataFromTypes(
+      DateTime startTime, DateTime endTime, List<HealthDataType> types) async {
+    List<HealthDataPoint> dataPoints = [];
+
+    for (var type in types) {
+      if (_platformType == PlatformType.ANDROID) {
+        final result = await _prepareQuery(startTime, endTime, type);
+        dataPoints.addAll(result);
+      } else {
+        final result = await _prepareQueryStatistic(startTime, endTime, type);
+        dataPoints.addAll(result);
+      }
+    }
+
+    const int threshold = 100;
+    if (dataPoints.length > threshold) {
+      return compute(removeDuplicates, dataPoints);
+    }
+
+    return removeDuplicates(dataPoints);
+  }
+
   /// Prepares a query, i.e. checks if the types are available, etc.
   Future<List<HealthDataPoint>> _prepareQuery(
       DateTime startTime, DateTime endTime, HealthDataType dataType) async {
@@ -445,6 +522,21 @@ class HealthFactory {
       return _computeAndroidBMI(startTime, endTime);
     }
     return await _dataQuery(startTime, endTime, dataType);
+  }
+
+  /// Prepares a query, i.e. checks if the types are available, etc.
+  Future<List<HealthDataPoint>> _prepareQueryStatistic(
+      DateTime startTime, DateTime endTime, HealthDataType dataType) async {
+    // Ask for device ID only once
+    _deviceId ??= (await _deviceInfo.iosInfo).identifierForVendor;
+
+    // If not implemented on platform, throw an exception
+    if (!isStatisticDataTypeAvailable(dataType)) {
+      throw HealthException(
+          dataType, 'Not available on platform $_platformType');
+    }
+
+    return await _dataQueryStatistic(startTime, endTime, dataType);
   }
 
   /// Fetches data points from Android/iOS native code.
@@ -476,6 +568,36 @@ class HealthFactory {
     }
   }
 
+  Future<List<HealthDataPoint>> _dataQueryStatistic(
+      DateTime startTime, DateTime endTime, HealthDataType dataType) async {
+
+    final args = <String, dynamic>{
+      'dataTypeKey': dataType.name,
+      'dataUnitKey': _dataTypeToUnit[dataType]!.name,
+      'startTime': startTime.millisecondsSinceEpoch,
+      'endTime': endTime.millisecondsSinceEpoch
+    };
+    final fetchedDataPoints =
+        await _channel.invokeMethod('getStatisticData', args);
+
+    if (fetchedDataPoints != null) {
+      final mesg = <String, dynamic>{
+        "dataType": dataType,
+        "dataPoints": fetchedDataPoints,
+        "deviceId": '$_deviceId',
+      };
+      const thresHold = 100;
+      // If the no. of data points are larger than the threshold,
+      // call the compute method to spawn an Isolate to do the parsing in a separate thread.
+      if (fetchedDataPoints.length > thresHold) {
+        return compute(_parseStatistic, mesg);
+      }
+      return _parseStatistic(mesg);
+    } else {
+      return <HealthDataPoint>[];
+    }
+  }
+
   /// Parses the fetched data points into a list of [HealthDataPoint].
   static List<HealthDataPoint> _parse(Map<String, dynamic> message) {
     final dataType = message["dataType"];
@@ -491,6 +613,8 @@ class HealthFactory {
         value = WorkoutHealthValue.fromJson(e);
       } else if (dataType == HealthDataType.ELECTROCARDIOGRAM) {
         value = ElectrocardiogramHealthValue.fromJson(e);
+      } else if (dataType == HealthDataType.NUTRITION) {
+        value = NutritionHealthValue.fromJson(e);
       } else {
         value = NumericHealthValue(e['value']);
       }
@@ -498,6 +622,7 @@ class HealthFactory {
       final DateTime to = DateTime.fromMillisecondsSinceEpoch(e['date_to']);
       final String sourceId = e["source_id"];
       final String sourceName = e["source_name"];
+      final currentDate = e["current_date"] ?? '';
       return HealthDataPoint(
         value,
         dataType,
@@ -508,6 +633,36 @@ class HealthFactory {
         device,
         sourceId,
         sourceName,
+      );
+    }).toList();
+
+    return list;
+  }
+
+  /// Parses the fetched data points into a list of [HealthDataPoint].
+  static List<HealthDataPoint> _parseStatistic(Map<String, dynamic> message) {
+    final dataType = message["dataType"];
+    final dataPoints = message["dataPoints"];
+    final device = message["deviceId"];
+    final unit = _dataTypeToUnit[dataType]!;
+    final list = dataPoints.map<HealthDataPoint>((e) {
+      // Handling different [HealthValue] types
+      HealthValue value = NumericHealthValue(e['value']);
+      ;
+
+      final DateTime from = DateTime.fromMillisecondsSinceEpoch(e['date_from']);
+      final DateTime to = DateTime.fromMillisecondsSinceEpoch(e['date_to']);
+
+      return HealthDataPoint(
+        value,
+        dataType,
+        unit,
+        from,
+        to,
+        _platformType,
+        device,
+        "",
+        "",
       );
     }).toList();
 
@@ -544,14 +699,14 @@ class HealthFactory {
     switch (type) {
       case HealthDataType.SLEEP_IN_BED:
         return 0;
-      case HealthDataType.SLEEP_ASLEEP:
-        return 1;
       case HealthDataType.SLEEP_AWAKE:
         return 2;
-      case HealthDataType.SLEEP_DEEP:
+      case HealthDataType.SLEEP_ASLEEP:
         return 3;
-      case HealthDataType.SLEEP_REM:
+      case HealthDataType.SLEEP_DEEP:
         return 4;
+      case HealthDataType.SLEEP_REM:
+        return 5;
       case HealthDataType.HEADACHE_UNSPECIFIED:
         return 0;
       case HealthDataType.HEADACHE_NOT_PRESENT:
@@ -700,6 +855,7 @@ class HealthFactory {
   bool _isOnAndroid(HealthWorkoutActivityType type) {
     // Returns true if the type is part of the Android set
     return {
+      // Both
       HealthWorkoutActivityType.ARCHERY,
       HealthWorkoutActivityType.BADMINTON,
       HealthWorkoutActivityType.BASEBALL,
@@ -742,8 +898,17 @@ class HealthFactory {
       HealthWorkoutActivityType.WALKING,
       HealthWorkoutActivityType.WATER_POLO,
       HealthWorkoutActivityType.YOGA,
+
+      // Android only
+      // Once Google Fit is removed, this list needs to be changed
       HealthWorkoutActivityType.AEROBICS,
       HealthWorkoutActivityType.BIATHLON,
+      HealthWorkoutActivityType.BIKING_HAND,
+      HealthWorkoutActivityType.BIKING_MOUNTAIN,
+      HealthWorkoutActivityType.BIKING_ROAD,
+      HealthWorkoutActivityType.BIKING_SPINNING,
+      HealthWorkoutActivityType.BIKING_STATIONARY,
+      HealthWorkoutActivityType.BIKING_UTILITY,
       HealthWorkoutActivityType.CALISTHENICS,
       HealthWorkoutActivityType.CIRCUIT_TRAINING,
       HealthWorkoutActivityType.CROSS_FIT,
@@ -759,6 +924,7 @@ class HealthFactory {
       HealthWorkoutActivityType.HOUSEWORK,
       HealthWorkoutActivityType.INTERVAL_TRAINING,
       HealthWorkoutActivityType.IN_VEHICLE,
+      HealthWorkoutActivityType.ICE_SKATING,
       HealthWorkoutActivityType.KAYAKING,
       HealthWorkoutActivityType.KETTLEBELL_TRAINING,
       HealthWorkoutActivityType.KICK_SCOOTER,
@@ -769,6 +935,7 @@ class HealthFactory {
       HealthWorkoutActivityType.PARAGLIDING,
       HealthWorkoutActivityType.POLO,
       HealthWorkoutActivityType.ROCK_CLIMBING,
+      HealthWorkoutActivityType.ROWING_MACHINE,
       HealthWorkoutActivityType.RUNNING_JOGGING,
       HealthWorkoutActivityType.RUNNING_SAND,
       HealthWorkoutActivityType.RUNNING_TREADMILL,
@@ -776,10 +943,13 @@ class HealthFactory {
       HealthWorkoutActivityType.SKATING_CROSS,
       HealthWorkoutActivityType.SKATING_INDOOR,
       HealthWorkoutActivityType.SKATING_INLINE,
+      HealthWorkoutActivityType.SKIING,
       HealthWorkoutActivityType.SKIING_BACK_COUNTRY,
       HealthWorkoutActivityType.SKIING_KITE,
       HealthWorkoutActivityType.SKIING_ROLLER,
       HealthWorkoutActivityType.SLEDDING,
+      HealthWorkoutActivityType.SNOWMOBILE,
+      HealthWorkoutActivityType.SNOWSHOEING,
       HealthWorkoutActivityType.STAIR_CLIMBING_MACHINE,
       HealthWorkoutActivityType.STANDUP_PADDLEBOARDING,
       HealthWorkoutActivityType.STILL,
